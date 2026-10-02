@@ -43,10 +43,14 @@
         const camera = document.getElementById("camera");
         const reading = document.getElementById('reading');
         button.onclick = async function () {
-            const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
-            camera.srcObject = stream;
-            reading.textContent = "Camera on";
-        };
+    try {
+        const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
+        camera.srcObject = stream;
+        reading.textContent = "Camera on";
+    } catch (err) {
+        reading.textContent = "Error: " + err.name;
+    }
+};
     </script>
 </body>
 
