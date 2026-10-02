@@ -1,0 +1,576 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>مقياس الضو</title>
+<meta name="theme-color" content="#0E1012">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Readex+Pro:wght@300;400;600&family=JetBrains+Mono:wght@400;600;700&display=swap">
+<style>
+/* Layout: one instrument column — settings strip, light source, big readout, then reference tools */
+:root{
+  --bg:#ECEEF1; --panel:#FFFFFF; --ink:#15181C; --muted:#5B636D; --line:#D3D8DE;
+  --accent:#C77A00; --accent-ink:#FFFFFF; --warn:#B8430C; --ok:#1E7A4A;
+  --f-body:"Readex Pro","Segoe UI",Tahoma,sans-serif;
+  --f-num:"JetBrains Mono",ui-monospace,Menlo,Consolas,monospace;
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){:root{
+  --bg:#0E1012; --panel:#171A1E; --ink:#ECEEF0; --muted:#8B939D; --line:#2A2F36;
+  --accent:#FFB224; --accent-ink:#1A1204; --warn:#FF8A4C; --ok:#4CC98A; color-scheme:dark}}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.55;
+  padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+.wrap{max-width:580px;margin:0 auto;padding-inline:16px;padding-block:18px 48px;display:grid;gap:18px}
+header{display:flex;align-items:center;justify-content:space-between;gap:12px}
+header h1{margin:0;font-size:22px;font-weight:600}
+header p{margin:2px 0 0;color:var(--muted);font-size:13px}
+.num,.ltr{direction:ltr;unicode-bidi:isolate;font-family:var(--f-num);font-variant-numeric:tabular-nums}
+section{display:grid;gap:12px}
+.lbl{font-size:11px;letter-spacing:.06em;color:var(--muted);text-transform:uppercase}
+h2{margin:0;font-size:13px;font-weight:600;color:var(--muted)}
+.seg{display:flex;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:3px;gap:3px}
+.seg button{flex:1;border:0;background:transparent;color:var(--ink);font:inherit;font-size:14px;padding:8px 4px;border-radius:7px;cursor:pointer;white-space:nowrap}
+.seg button[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink);font-weight:600}
+button:focus-visible,input:focus-visible,select:focus-visible,label.btn:focus-within{outline:2px solid var(--accent);outline-offset:2px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px}
+.field{display:grid;gap:4px;min-width:0}
+.field label{font-size:12px;color:var(--muted)}
+select,input[type=number]{width:100%;font-family:var(--f-num);font-size:16px;padding:9px 10px;border:1px solid var(--line);border-radius:8px;background:var(--panel);color:var(--ink);direction:ltr}
+.readout{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:18px 16px;display:grid;gap:14px}
+.big{display:flex;align-items:baseline;justify-content:center;gap:10px;direction:ltr}
+.big .pre{font-family:var(--f-num);font-size:22px;color:var(--muted)}
+.big .val{font-family:var(--f-num);font-size:clamp(56px,18vw,88px);font-weight:700;line-height:1;color:var(--accent)}
+.scale{position:relative;height:34px;direction:ltr}
+.scale .track{position:absolute;inset:14px 0 auto;height:2px;background:var(--line)}
+.scale .tick{position:absolute;top:8px;width:1px;height:14px;background:var(--muted)}
+.scale .tick.minor{top:11px;height:8px;opacity:.5}
+.scale .tl{position:absolute;top:22px;font-family:var(--f-num);font-size:10px;color:var(--muted);transform:translateX(-50%)}
+.scale .needle{position:absolute;top:0;width:3px;height:24px;background:var(--accent);border-radius:2px;transform:translateX(-50%);transition:left .25s}
+@media (prefers-reduced-motion:reduce){.scale .needle{transition:none}}
+.sub{text-align:center;font-size:14px;color:var(--muted)}
+.sub b{color:var(--ink);font-weight:600}
+.chips{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:8px}
+.chip{border-top:1px solid var(--line);padding-top:8px;display:grid;gap:2px}
+.chip .v{font-family:var(--f-num);font-size:17px;direction:ltr;text-align:right}
+.note{font-size:13px;padding:10px 12px;border-radius:8px;border:1px solid var(--line)}
+.note.warn{border-color:var(--warn);color:var(--warn)}
+.note.ok{border-color:var(--ok);color:var(--ok)}
+.panel{display:grid;gap:10px}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.btn{font:inherit;font-size:14px;padding:9px 14px;border-radius:8px;border:1px solid var(--accent);background:transparent;color:var(--accent);cursor:pointer}
+.btn.solid{background:var(--accent);color:var(--accent-ink)}
+.btn[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink)}
+.stage{position:relative;border-radius:10px;overflow:hidden;border:1px solid var(--line);background:#000;max-width:100%}
+.stage video,.stage canvas{display:block;width:100%;max-width:100%}
+.stage canvas.ov{position:absolute;inset:0;height:100%;cursor:crosshair}
+canvas#pv{width:100%;max-width:100%;border-radius:10px;border:1px solid var(--line);cursor:crosshair;display:block}
+.muted{color:var(--muted);font-size:13px}
+.pill{display:inline-block;font-size:12px;padding:3px 9px;border-radius:99px;border:1px solid var(--line);color:var(--muted)}
+.pill.ok{border-color:var(--ok);color:var(--ok)}
+.pill.warn{border-color:var(--warn);color:var(--warn)}
+.ratio{font-family:var(--f-num);font-size:20px;direction:ltr}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th,td{padding:6px 4px;border-bottom:1px solid var(--line);text-align:center}
+th{color:var(--muted);font-weight:400;font-size:12px}
+td{font-family:var(--f-num)}
+.tblwrap{overflow-x:auto}
+details{border-top:1px solid var(--line);padding-top:10px}
+summary{cursor:pointer;font-size:14px;font-weight:600}
+#install[hidden]{display:none}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <h1>مقياس الضو</h1>
+      <p>Exposure للـ cine والـ stills</p>
+    </div>
+    <button class="btn" id="install" hidden>نزّل الـ app</button>
+  </header>
+
+  <section aria-label="Mode">
+    <div class="seg" role="group">
+      <button id="m-cine" aria-pressed="true">Cine</button>
+      <button id="m-still" aria-pressed="false">Stills</button>
+    </div>
+    <div class="grid">
+      <div class="field"><label for="iso">ISO</label><select id="iso"></select></div>
+      <div class="field cine"><label for="fps">fps</label><select id="fps"></select></div>
+      <div class="field cine"><label for="angle">Shutter angle</label><select id="angle"></select></div>
+      <div class="field still" hidden><label for="prio">أولوية</label>
+        <select id="prio"><option value="A">Aperture → shutter</option><option value="S">Shutter → aperture</option></select></div>
+      <div class="field still pA" hidden><label for="fsel">Aperture</label><select id="fsel"></select></div>
+      <div class="field still pS" hidden><label for="tsel">Shutter</label><select id="tsel"></select></div>
+      <div class="field"><label for="nd">ND على العدسة</label><select id="nd"></select></div>
+    </div>
+  </section>
+
+  <section aria-label="Light source">
+    <h2>مصدر القراءة</h2>
+    <div class="seg" role="group">
+      <button id="s-live" aria-pressed="true">كاميرا</button>
+      <button id="s-photo" aria-pressed="false">صورة</button>
+      <button id="s-lux" aria-pressed="false">Lux / fc</button>
+      <button id="s-ev" aria-pressed="false">EV</button>
+    </div>
+
+    <!-- LIVE CAMERA -->
+    <div id="p-live" class="panel">
+      <div class="row">
+        <button class="btn solid" id="camBtn">شغّل الكاميرا</button>
+        <button class="btn" id="camFlip" hidden>بدّل الكاميرا</button>
+        <span class="pill" id="camMode">مقفولة</span>
+      </div>
+      <div class="stage" id="stage" hidden>
+        <video id="vid" playsinline muted autoplay></video>
+        <canvas class="ov" id="ov"></canvas>
+      </div>
+      <div class="seg" role="group">
+        <button id="l-avg" aria-pressed="true">Average</button>
+        <button id="l-spot" aria-pressed="false">Spot (اضغط)</button>
+      </div>
+      <div class="row">
+        <button class="btn" id="hold" aria-pressed="false">ثبّت القراءة</button>
+        <button class="btn" id="refBtn" aria-pressed="false">خلّي دا المرجع</button>
+        <span class="ratio" id="ratio"></span>
+      </div>
+      <div class="muted" id="liveInfo">وجّه الكاميرا على المشهد. للـ ratio بين key وfill: اعمل spot على الـ key واضغط "خلّي دا المرجع"، وبعدين spot على الـ fill.</div>
+    </div>
+
+    <!-- PHOTO -->
+    <div id="p-photo" class="panel" hidden>
+      <div class="row">
+        <label class="btn solid" for="file">صوّر المشهد</label>
+        <input id="file" type="file" accept="image/jpeg,image/*" capture="environment" hidden>
+        <div class="seg" role="group" style="flex:1;min-width:180px">
+          <button id="r-avg" aria-pressed="true">Average</button>
+          <button id="r-spot" aria-pressed="false">Spot (اضغط)</button>
+        </div>
+      </div>
+      <canvas id="pv" hidden></canvas>
+      <div id="pinfo" class="muted">صوّر بكاميرا الموبايل العادية. البرنامج بيقرا الـ ISO والـ shutter والـ aperture من الصورة (EXIF) ويحسب سطوعها.</div>
+    </div>
+
+    <!-- LUX -->
+    <div id="p-lux" hidden class="grid">
+      <div class="field"><label for="lux">Lux (incident)</label><input id="lux" type="number" min="0.1" step="any" value="2000"></div>
+      <div class="field"><label for="fc">Footcandles</label><input id="fc" type="number" min="0.01" step="any"></div>
+    </div>
+
+    <!-- EV -->
+    <div id="p-ev" hidden class="grid">
+      <div class="field"><label for="ev">EV @ ISO 100</label><input id="ev" type="number" step="0.1" value="12"></div>
+      <div class="field"><label for="evpre">أمثلة</label>
+        <select id="evpre">
+          <option value="">اختار…</option>
+          <option value="15">شمس الضهر — 15</option>
+          <option value="13">سحاب خفيف — 13</option>
+          <option value="12">ضل في يوم شمس — 12</option>
+          <option value="10">بعد المغرب بشوية — 10</option>
+          <option value="8">مكتب منوّر — 8</option>
+          <option value="6">بيت بالليل — 6</option>
+          <option value="4">شارع بالليل — 4</option>
+        </select></div>
+    </div>
+  </section>
+
+  <section class="readout" aria-live="polite">
+    <div class="big"><span class="pre" id="rpre">T</span><span class="val" id="rval">—</span></div>
+    <div class="scale" id="scale"></div>
+    <div class="sub" id="rsub"></div>
+    <div id="rnote"></div>
+    <div class="chips">
+      <div class="chip"><span class="lbl">EV100</span><span class="v" id="c-ev100">—</span></div>
+      <div class="chip"><span class="lbl">EV @ ISO</span><span class="v" id="c-evi">—</span></div>
+      <div class="chip"><span class="lbl">Lux</span><span class="v" id="c-lux">—</span></div>
+      <div class="chip"><span class="lbl">Footcandles</span><span class="v" id="c-fc">—</span></div>
+    </div>
+  </section>
+
+  <section id="ndplan" aria-label="ND planner">
+    <h2>عايز تصوّر على T-stop معين؟</h2>
+    <div class="grid">
+      <div class="field"><label for="tgt">Target stop</label><select id="tgt"></select></div>
+      <div class="field"><label>الـ ND المطلوب</label><div class="num" id="ndneed" style="font-size:20px;padding-top:4px">—</div></div>
+    </div>
+  </section>
+
+  <details>
+    <summary>Calibration</summary>
+    <div class="panel" style="padding-top:10px">
+      <div class="grid">
+        <div class="field"><label for="lensN">Aperture كاميرا الموبايل</label><input id="lensN" type="number" step="0.1" min="0.9" value="1.8"></div>
+        <div class="field"><label for="cal">Offset (stops)</label><input id="cal" type="number" step="0.1" value="0"></div>
+      </div>
+      <div class="muted">الـ aperture بيتعبّى براهو أول ما تصوّر صورة في وضع "صورة". الـ offset: صوّر نفس المشهد بكاميرتك أو لايت ميتر حقيقي، ولو القراءة هنا أفتح بـ stop دخّل −1.</div>
+      <div class="grid">
+        <div class="field"><label for="knownEv">EV معروف للمشهد الحالي</label><input id="knownEv" type="number" step="0.1" placeholder="مثلاً 11"></div>
+        <div class="field"><label>&nbsp;</label><button class="btn" id="calNow">عاير على القراءة دي</button></div>
+      </div>
+    </div>
+  </details>
+
+  <details>
+    <summary>جدول الـ ND</summary>
+    <div class="tblwrap"><table>
+      <thead><tr><th>Stops</th><th>Density</th><th>Factor</th><th>Light</th></tr></thead>
+      <tbody id="ndtbl"></tbody>
+    </table></div>
+  </details>
+</div>
+
+<script>
+(()=>{
+const $=id=>document.getElementById(id);
+const log2=Math.log2;
+const FST=[1,1.1,1.2,1.4,1.6,1.8,2,2.2,2.5,2.8,3.2,3.5,4,4.5,5,5.6,6.3,7.1,8,9,10,11,13,14,16,18,20,22,25,29,32];
+const FSTV=FST.map((n,i)=>Math.pow(2,i/6));
+const TS=[30,25,20,15,13,10,8,6,5,4,3.2,2.5,2,1.6,1.3,1,0.8,0.6,0.5,0.4,0.3,1/4,1/5,1/6,1/8,1/10,1/13,1/15,1/20,1/25,1/30,1/40,1/50,1/60,1/80,1/100,1/125,1/160,1/200,1/250,1/320,1/400,1/500,1/640,1/800,1/1000,1/1250,1/1600,1/2000,1/2500,1/3200,1/4000,1/5000,1/6400,1/8000];
+const ISOS=[50,64,80,100,125,160,200,250,320,400,500,640,800,1000,1250,1600,2000,2500,3200,4000,5000,6400,8000,10000,12800];
+const FPS=[23.976,24,25,29.97,30,48,50,60,100,120];
+const ANG=[45,90,144,172.8,180,270,360];
+const NDS=[];for(let s=0;s<=30;s++)NDS.push(s/3);
+
+const S={mode:'cine',src:'live',meter:'avg',photo:null,spot:null,live:{ev:null,held:false,ref:null,spot:null,meter:'avg',relOff:null}};
+
+// ---------- persistence ----------
+const store={get(k){try{return localStorage.getItem('lm-'+k)}catch(e){return null}},set(k,v){try{localStorage.setItem('lm-'+k,v)}catch(e){}}};
+
+function fillSel(el,arr,fmt,def){el.innerHTML=arr.map((v,i)=>`<option value="${i}">${fmt(v)}</option>`).join('');el.value=String(Math.max(0,arr.indexOf(def)))}
+const fmtT=t=>t>=0.3?(Math.round(t*10)/10)+'″':'1/'+Math.round(1/t);
+const fmtF=n=>(n<10&&n%1)?n.toFixed(1):String(n);
+function fmtS(s){const w=Math.floor(s+1e-9),r=Math.round((s-w)*3);return (w?w:'')+(r?(w?' ':'')+r+'/3':'')||'0'}
+fillSel($('iso'),ISOS,String,800);
+fillSel($('fps'),FPS,String,24);
+fillSel($('angle'),ANG,v=>v+'°',180);
+fillSel($('fsel'),FST,v=>'f/'+fmtF(v),5.6);
+fillSel($('tsel'),TS,fmtT,1/125);
+fillSel($('nd'),NDS,s=>s===0?'بدون':`${(s*0.3).toFixed(1)} · ${fmtS(s)} st`,0);
+fillSel($('tgt'),FST,v=>'T'+fmtF(v),2.8);
+$('ndtbl').innerHTML=[1,2,3,4,5,6,7,8,9,10].map(s=>`<tr><td>${s}</td><td>ND ${(s*0.3).toFixed(1)}</td><td>${Math.pow(2,s)}×</td><td>${(100/Math.pow(2,s)).toFixed(s>6?2:1)}%</td></tr>`).join('');
+
+// restore settings
+['iso','fps','angle','prio','fsel','tsel','nd','tgt'].forEach(id=>{const v=store.get(id);if(v!==null&&$(id).querySelector(`option[value="${v}"]`))$(id).value=v});
+['cal','lensN'].forEach(id=>{const v=store.get(id);if(v!==null)$(id).value=v});
+if(store.get('mode')==='still')S.mode='still';
+{const r=store.get('relOff');if(r!==null&&isFinite(+r))S.live.relOff=+r}
+
+function press(ids,on){ids.forEach(id=>$(id).setAttribute('aria-pressed',String(id===on)))}
+$('m-cine').onclick=()=>{S.mode='cine';store.set('mode','cine');layout()};
+$('m-still').onclick=()=>{S.mode='still';store.set('mode','still');layout()};
+['live','photo','lux','ev'].forEach(k=>$('s-'+k).onclick=()=>{S.src=k;if(k!=='live')stopCam();layout()});
+$('r-avg').onclick=()=>{S.meter='avg';press(['r-avg','r-spot'],'r-avg');measurePhoto()};
+$('r-spot').onclick=()=>{S.meter='spot';press(['r-avg','r-spot'],'r-spot');measurePhoto()};
+$('l-avg').onclick=()=>{S.live.meter='avg';press(['l-avg','l-spot'],'l-avg')};
+$('l-spot').onclick=()=>{S.live.meter='spot';press(['l-avg','l-spot'],'l-spot')};
+
+function layout(){
+  press(['m-cine','m-still'],S.mode==='cine'?'m-cine':'m-still');
+  press(['s-live','s-photo','s-lux','s-ev'],'s-'+S.src);
+  document.querySelectorAll('.cine').forEach(e=>e.hidden=S.mode!=='cine');
+  const pr=$('prio').value;
+  document.querySelectorAll('.still').forEach(e=>e.hidden=S.mode!=='still');
+  if(S.mode==='still'){document.querySelector('.pA').hidden=pr!=='A';document.querySelector('.pS').hidden=pr!=='S'}
+  $('ndplan').hidden=S.mode!=='cine';
+  ['live','photo','lux','ev'].forEach(k=>$('p-'+k).hidden=S.src!==k);
+  calc();
+}
+['iso','fps','angle','prio','fsel','tsel','nd','tgt'].forEach(id=>$(id).addEventListener('input',()=>{store.set(id,$(id).value);if(id==='prio')layout();else calc()}));
+$('ev').addEventListener('input',calc);
+$('evpre').onchange=e=>{if(e.target.value){$('ev').value=e.target.value;calc()}};
+$('lux').addEventListener('input',()=>{const l=+$('lux').value;if(l>0)$('fc').value=+(l/10.764).toFixed(2);calc()});
+$('fc').addEventListener('input',()=>{const f=+$('fc').value;if(f>0)$('lux').value=Math.round(f*10.764*10)/10;calc()});
+$('fc').value=+(2000/10.764).toFixed(2);
+['cal','lensN'].forEach(id=>$(id).addEventListener('input',()=>{store.set(id,$(id).value);calc()}));
+
+function nearest(arr,x){let b=0,d=1e9;arr.forEach((v,i)=>{const dd=Math.abs(log2(v)-log2(x));if(dd<d){d=dd;b=i}});return b}
+const cal=()=>parseFloat($('cal').value)||0;
+
+function ev100(){
+  if(S.src==='ev'){const v=parseFloat($('ev').value);return isFinite(v)?v:null}
+  if(S.src==='lux'){const l=+$('lux').value;return l>0?log2(l/2.5):null}
+  if(S.src==='photo'&&S.photo&&S.photo.ev!=null)return S.photo.ev+cal();
+  if(S.src==='live'&&S.live.ev!=null)return S.live.ev+cal();
+  return null;
+}
+
+function drawScale(idx){
+  const a=Math.max(0,Math.min((idx??12)-6,FST.length-13)),b=a+12;
+  let h='<div class="track"></div>';
+  for(let i=a;i<=b;i++){const x=((i-a)/(b-a))*100;const major=(i%3===0);
+    h+=`<div class="tick${major?'':' minor'}" style="left:${x}%"></div>`;
+    if(major)h+=`<div class="tl" style="left:${x}%">${fmtF(FST[i])}</div>`}
+  if(idx!=null){const x=Math.max(0,Math.min(100,((idx-a)/(b-a))*100));h+=`<div class="needle" style="left:${x}%"></div>`}
+  $('scale').innerHTML=h;
+}
+
+let lastNote='';
+function calc(){
+  const e=ev100();const iso=ISOS[+$('iso').value];const nd=NDS[+$('nd').value];
+  let noteHTML='';
+  const warn=(t,cls='warn')=>{noteHTML=`<div class="note ${cls}">${t}</div>`};
+  if(e==null){
+    $('rval').textContent='—';
+    $('rsub').textContent=S.src==='live'?'شغّل الكاميرا عشان تطلع القراءة':S.src==='photo'?'صوّر المشهد عشان تطلع القراءة':'دخّل قيمة';
+    ['c-ev100','c-evi','c-lux','c-fc'].forEach(i=>$(i).textContent='—');$('ndneed').textContent='—';drawScale(null);
+    if(lastNote!==''){$('rnote').innerHTML='';lastNote=''}return}
+  const evi=e+log2(iso/100)-nd;
+  $('c-ev100').textContent=e.toFixed(1);
+  $('c-evi').textContent=evi.toFixed(1);
+  const lux=2.5*Math.pow(2,e),fc=lux/10.764;
+  $('c-lux').textContent=lux>=100?Math.round(lux).toLocaleString('en'):lux.toFixed(1);
+  $('c-fc').textContent=fc>=100?Math.round(fc).toLocaleString('en'):fc.toFixed(1);
+
+  let t;
+  if(S.mode==='cine'){t=ANG[+$('angle').value]/360/FPS[+$('fps').value]}
+  else if($('prio').value==='S'){t=TS[+$('tsel').value]}
+
+  if(t!=null){
+    const N=Math.sqrt(t*Math.pow(2,evi));
+    $('rpre').textContent=S.mode==='cine'?'T':'f/';
+    const i=nearest(FSTV,N);const err=log2(N*N/(FSTV[i]*FSTV[i]));
+    $('rval').textContent=fmtF(FST[i]);drawScale(i);
+    $('rsub').innerHTML=`<span class="ltr">${fmtT(t)}</span> · ISO <span class="ltr">${iso}</span>`+(Math.abs(err)>0.05?` · <b class="ltr">${err>0?'+':''}${err.toFixed(1)}</b> stop عن القيمة المظبوطة`:'');
+    if(N>22.5){const need=Math.ceil(log2(N*N/(11*11))*3)/3;warn(`الضو كتير شديد. محتاج ND حوالي <span class="ltr">${(need*0.3).toFixed(1)}</span> (<span class="ltr">${fmtS(need)}</span> stops) عشان ترجع لـ T11، أو نزّل الـ ISO.`)}
+    else if(N<1.1){const need=log2(1.4*1.4/(N*N));warn(`الضو ما كفاية حتى على T1.4. ناقصك حوالي <span class="ltr">${need.toFixed(1)}</span> stops. ارفع الـ ISO أو زيد الإضاءة.`)}
+  } else {
+    const fi=+$('fsel').value,Nv=FSTV[fi];
+    const tt=Nv*Nv/Math.pow(2,evi);const i=nearest(TS,tt);const err=log2(TS[i]/tt);
+    $('rpre').textContent='';$('rval').textContent=fmtT(TS[i]);drawScale(fi);
+    $('rsub').innerHTML=`f/<span class="ltr">${fmtF(FST[fi])}</span> · ISO <span class="ltr">${iso}</span>`+(Math.abs(err)>0.05?` · <b class="ltr">${err>0?'+':''}${err.toFixed(1)}</b> stop`:'');
+    if(tt<1/8000)warn('أسرع من 1/8000. استعمل ND أو قفّل الـ aperture.');
+    else if(tt>1/30)warn('الـ shutter بطيء على اليد. استعمل tripod أو ارفع الـ ISO.','ok');
+  }
+  if(S.mode==='cine'){
+    const T=FSTV[+$('tgt').value];const need=log2(t*Math.pow(2,e+log2(iso/100))/(T*T));
+    if(need<=0.05)$('ndneed').textContent=need<-0.2?`بدون · ناقص ${(-need).toFixed(1)} st`:'بدون ND';
+    else{const r=Math.ceil(need*3-0.15)/3;$('ndneed').textContent=`ND ${(r*0.3).toFixed(1)} · ${fmtS(r)} st`}
+  }
+  if(noteHTML!==lastNote){$('rnote').innerHTML=noteHTML;lastNote=noteHTML}
+}
+
+// ---------- shared luminance ----------
+const LUT=new Float32Array(256);for(let i=0;i<256;i++){const v=i/255;LUT[i]=v<=0.04045?v/12.92:Math.pow((v+0.055)/1.055,2.4)}
+function lumStats(d,W,H,meter,spot){
+  let x0=0,y0=0,x1=W,y1=H;
+  if(meter==='spot'){const c=spot||{x:.5,y:.5};const rr=Math.max(2,Math.round(Math.min(W,H)*0.05));
+    const cx=Math.round(c.x*W),cy=Math.round(c.y*H);x0=Math.max(0,cx-rr);x1=Math.min(W,cx+rr);y0=Math.max(0,cy-rr);y1=Math.min(H,cy+rr)}
+  let sum=0,n=0,clip=0,cnt=0;
+  for(let y=y0;y<y1;y++)for(let x=x0;x<x1;x++){const i=(y*W+x)*4;
+    const L=0.2126*LUT[d[i]]+0.7152*LUT[d[i+1]]+0.0722*LUT[d[i+2]];
+    let w=1;if(meter==='avg'){const dx=x/W-.5,dy=y/H-.5;w=1.6-Math.min(1.2,Math.sqrt(dx*dx+dy*dy)*2.4)}
+    sum+=L*w;n+=w;cnt++;if(d[i]>250&&d[i+1]>250&&d[i+2]>250)clip++}
+  return {mean:Math.max(sum/n,1e-5),clip:clip/cnt,box:[x0,y0,x1,y1]};
+}
+const accent=()=>getComputedStyle(document.documentElement).getPropertyValue('--accent').trim()||'#FFB224';
+
+// ---------- LIVE CAMERA ----------
+const vid=$('vid'),ov=$('ov'),work=document.createElement('canvas');
+const wctx=work.getContext('2d',{willReadFrequently:true});
+let stream=null,track=null,camMode=null,facing='environment',loopId=0,lastTick=0,wake=null,manual={t:null,iso:null,lastSet:0};
+let devices=[];
+
+function setPill(txt,cls){const p=$('camMode');p.textContent=txt;p.className='pill'+(cls?' '+cls:'')}
+
+async function startCam(){
+  if(!navigator.mediaDevices?.getUserMedia){setPill('الكاميرا مش متاحة هنا','warn');$('liveInfo').textContent='المتصفح دا ما بيدعم الكاميرا. افتح الـ app من Chrome على رابط https.';return}
+  try{
+    stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:facing},width:{ideal:1280},height:{ideal:720}},audio:false});
+  }catch(err){
+    setPill('ما اتفتحت','warn');
+    $('liveInfo').textContent=err.name==='NotAllowedError'?'رفضت إذن الكاميرا. افتح إعدادات الموقع في Chrome واسمح بالكاميرا.':'الكاميرا ما اتفتحت: '+err.name;
+    return;
+  }
+  track=stream.getVideoTracks()[0];vid.srcObject=stream;await vid.play().catch(()=>{});
+  $('stage').hidden=false;$('camBtn').textContent='وقّف الكاميرا';
+  try{devices=(await navigator.mediaDevices.enumerateDevices()).filter(d=>d.kind==='videoinput');$('camFlip').hidden=devices.length<2}catch(e){}
+  try{wake=await navigator.wakeLock?.request('screen')}catch(e){}
+  await detectMode();
+  loopId=requestAnimationFrame(loop);
+}
+function stopCam(){
+  cancelAnimationFrame(loopId);
+  if(stream)stream.getTracks().forEach(t=>t.stop());
+  stream=null;track=null;camMode=null;S.live.ev=null;
+  $('stage').hidden=true;$('camBtn').textContent='شغّل الكاميرا';setPill('مقفولة');
+  try{wake&&wake.release()}catch(e){}wake=null;calc();
+}
+$('camBtn').onclick=()=>stream?stopCam():startCam();
+$('camFlip').onclick=async()=>{facing=facing==='environment'?'user':'environment';stopCam();await startCam()};
+
+async function detectMode(){
+  const caps=track.getCapabilities?track.getCapabilities():{};
+  const set=track.getSettings?track.getSettings():{};
+  // 1) camera reports its auto exposure → absolute
+  if(isFinite(set.exposureTime)&&set.exposureTime>0&&isFinite(set.iso)&&set.iso>0){
+    camMode='report';setPill('قراءة حقيقية','ok');
+    $('liveInfo').textContent='الكاميرا بتدّي الـ exposure والـ ISO بتاعتها — القراءة absolute. ظبّط الـ offset مرة واحدة من Calibration.';return}
+  // 2) we can drive exposure manually → absolute
+  const em=caps.exposureMode||[];
+  if(em.includes('manual')&&caps.exposureTime&&caps.iso){
+    try{
+      const iso=Math.max(caps.iso.min,Math.min(caps.iso.max,100));
+      const et=Math.max(caps.exposureTime.min,Math.min(caps.exposureTime.max,100)); // 100 × 100µs = 1/100 s
+      await track.applyConstraints({advanced:[{exposureMode:'manual',iso,exposureTime:et}]});
+      manual={t:et,iso,lastSet:performance.now(),caps};
+      camMode='manual';setPill('قراءة حقيقية (manual)','ok');
+      $('liveInfo').textContent='البرنامج ماسك الـ exposure بنفسو — القراءة absolute. ظبّط الـ offset مرة واحدة من Calibration.';return
+    }catch(e){}
+  }
+  // 3) relative only (most laptop webcams)
+  camMode='relative';
+  let locked=false;
+  if(em.includes('manual')){try{await track.applyConstraints({advanced:[{exposureMode:'manual'}]});locked=true}catch(e){}}
+  S.live.locked=locked;
+  if(S.live.relOff!=null){setPill('نسبية · معايرة',locked?'ok':'warn')}else setPill('نسبية · محتاجة معايرة','warn');
+  $('liveInfo').innerHTML='الكاميرا دي ما بتدّي معلومات exposure. عشان تطلع EV: دخّل EV معروف في Calibration واضغط "عاير على القراءة دي". '+(locked?'الـ exposure مقفول، فالمعايرة بتثبت طول ما الكاميرا شغالة.':'<b>الكاميرا دي بتغيّر السطوع براها، فالـ EV هنا تقريبي.</b> الـ ratio بين spot و spot في نفس الكادر لسه مفيد.');
+}
+
+function loop(ts){
+  loopId=requestAnimationFrame(loop);
+  if(ts-lastTick<200||!vid.videoWidth)return;lastTick=ts;
+  const W=160,H=Math.round(vid.videoHeight*W/vid.videoWidth);
+  if(work.width!==W||work.height!==H){work.width=W;work.height=H}
+  wctx.drawImage(vid,0,0,W,H);
+  const st=lumStats(wctx.getImageData(0,0,W,H).data,W,H,S.live.meter,S.live.spot);
+  drawOverlay(st,W,H);
+  const rel=log2(st.mean/0.18);
+  S.live.rel=rel;
+  let ev=null;
+  const N=parseFloat($('lensN').value)||1.8;
+  if(camMode==='report'){
+    const s=track.getSettings();
+    if(s.exposureTime>0&&s.iso>0){const t=s.exposureTime/10000;ev=log2(N*N/t)-log2(s.iso/100)+rel}
+  } else if(camMode==='manual'){
+    const t=manual.t/10000;ev=log2(N*N/t)-log2(manual.iso/100)+rel;
+    // auto-range: keep the frame near mid grey so readings stay in the sensor's good zone
+    if(ts-manual.lastSet>450&&(st.mean<0.05||st.mean>0.45||st.clip>0.15)){
+      const c=manual.caps.exposureTime;let k=0.18/st.mean;if(st.clip>0.15)k=Math.min(k,0.5);
+      k=Math.max(0.25,Math.min(4,k));const nt=Math.max(c.min,Math.min(c.max,manual.t*k));
+      if(Math.abs(log2(nt/manual.t))>0.2){manual.t=nt;manual.lastSet=ts;track.applyConstraints({advanced:[{exposureMode:'manual',exposureTime:nt,iso:manual.iso}]}).catch(()=>{})}
+      else manual.lastSet=ts;
+      const s=track.getSettings();if(s.exposureTime>0)manual.t=s.exposureTime;
+    }
+  } else if(camMode==='relative'&&S.live.relOff!=null){ev=rel+S.live.relOff}
+
+  if(S.live.held)return;
+  S.live.ev=ev;
+  if(S.live.ref!=null){
+    const cur=ev!=null?ev:rel;const d=cur-S.live.ref;
+    $('ratio').textContent=`${d>=0?'+':''}${d.toFixed(1)} st · ${d>=0?Math.pow(2,d).toFixed(1)+':1':'1:'+Math.pow(2,-d).toFixed(1)}`;
+  } else $('ratio').textContent='';
+  if(S.src==='live')calc();
+}
+function drawOverlay(st,W,H){
+  const r=ov.getBoundingClientRect();const dpr=window.devicePixelRatio||1;
+  const cw=Math.round(r.width*dpr),ch=Math.round(r.height*dpr);
+  if(ov.width!==cw||ov.height!==ch){ov.width=cw;ov.height=ch}
+  const c=ov.getContext('2d');c.clearRect(0,0,cw,ch);
+  if(S.live.meter!=='spot')return;
+  const [x0,y0,x1,y1]=st.box;const sx=cw/W,sy=ch/H;
+  c.strokeStyle=accent();c.lineWidth=2*dpr;c.strokeRect(x0*sx,y0*sy,(x1-x0)*sx,(y1-y0)*sy);
+}
+ov.addEventListener('click',e=>{const r=ov.getBoundingClientRect();S.live.spot={x:(e.clientX-r.left)/r.width,y:(e.clientY-r.top)/r.height};S.live.meter='spot';press(['l-avg','l-spot'],'l-spot')});
+$('hold').onclick=()=>{S.live.held=!S.live.held;$('hold').setAttribute('aria-pressed',String(S.live.held));$('hold').textContent=S.live.held?'القراءة ثابتة — اضغط تفك':'ثبّت القراءة'};
+$('refBtn').onclick=()=>{
+  if(S.live.ref!=null){S.live.ref=null;$('refBtn').setAttribute('aria-pressed','false');$('refBtn').textContent='خلّي دا المرجع';$('ratio').textContent='';return}
+  const cur=S.live.ev!=null?S.live.ev:S.live.rel;if(cur==null)return;
+  S.live.ref=cur;$('refBtn').setAttribute('aria-pressed','true');$('refBtn').textContent='شيل المرجع';
+};
+$('calNow').onclick=()=>{
+  const k=parseFloat($('knownEv').value);if(!isFinite(k)){$('knownEv').focus();return}
+  if(S.src==='live'&&camMode==='relative'&&S.live.rel!=null){
+    S.live.relOff=k-S.live.rel;store.set('relOff',String(S.live.relOff));setPill('نسبية · معايرة',S.live.locked?'ok':'warn');
+  } else {
+    const raw=S.src==='live'?S.live.ev:S.src==='photo'&&S.photo?S.photo.ev:null;
+    if(raw==null){$('calNow').textContent='مافي قراءة كاميرا أو صورة';setTimeout(()=>$('calNow').textContent='عاير على القراءة دي',1800);return}
+    $('cal').value=(k-raw).toFixed(1);store.set('cal',$('cal').value);
+  }
+  $('calNow').textContent='اتعايرت ✓';setTimeout(()=>$('calNow').textContent='عاير على القراءة دي',1800);calc();
+};
+document.addEventListener('visibilitychange',async()=>{
+  if(document.hidden&&stream){S.live.resume=true;stopCam()}
+  else if(!document.hidden&&S.live.resume&&S.src==='live'){S.live.resume=false;startCam()}
+});
+
+// ---------- PHOTO ----------
+$('file').addEventListener('change',async e=>{
+  const f=e.target.files[0];if(!f)return;
+  const buf=await f.arrayBuffer();const ex=readExif(buf);
+  const url=URL.createObjectURL(f);const img=new Image();
+  img.onload=()=>{
+    const cv=$('pv');const W=320,H=Math.round(img.height*W/img.width);cv.width=W;cv.height=H;
+    const ctx=cv.getContext('2d',{willReadFrequently:true});ctx.drawImage(img,0,0,W,H);
+    S.photo={ex,img:ctx.getImageData(0,0,W,H),W,H,ev:null};S.spot=null;cv.hidden=false;URL.revokeObjectURL(url);
+    if(ex&&ex.N&&ex.N<4){$('lensN').value=ex.N.toFixed(1);store.set('lensN',$('lensN').value)}
+    measurePhoto();
+  };
+  img.onerror=()=>{$('pinfo').textContent='الصورة ما اتفتحت. جرّب صورة JPEG.'};
+  img.src=url;
+});
+$('pv').addEventListener('click',ev=>{
+  if(!S.photo)return;const r=ev.target.getBoundingClientRect();
+  S.spot={x:(ev.clientX-r.left)/r.width,y:(ev.clientY-r.top)/r.height};
+  if(S.meter!=='spot'){S.meter='spot';press(['r-avg','r-spot'],'r-spot')}measurePhoto();
+});
+function measurePhoto(){
+  const P=S.photo;if(!P){calc();return}
+  const st=lumStats(P.img.data,P.W,P.H,S.meter,S.spot);
+  const ctx=$('pv').getContext('2d');ctx.putImageData(P.img,0,0);
+  if(S.meter==='spot'){const [x0,y0,x1,y1]=st.box;ctx.strokeStyle=accent();ctx.lineWidth=2;ctx.strokeRect(x0,y0,x1-x0,y1-y0)}
+  const ex=P.ex,rel=log2(st.mean/0.18);
+  if(ex&&ex.t&&ex.N&&ex.iso){
+    P.ev=log2(ex.N*ex.N/ex.t)-log2(ex.iso/100)+rel;
+    $('pinfo').innerHTML=`الموبايل صوّر على <span class="ltr">f/${ex.N.toFixed(1)} · ${fmtT(ex.t)} · ISO ${ex.iso}</span>. سطوع ${S.meter==='spot'?'الـ spot':'المشهد'}: <span class="ltr">${(rel>=0?'+':'')+rel.toFixed(1)}</span> stop عن الرمادي 18%.`+(st.clip>0.2?' <b>في منطقة محروقة كتيرة، والقراءة ممكن تطلع أقل من الحقيقة.</b>':'');
+  } else {
+    P.ev=null;
+    $('pinfo').innerHTML='الصورة دي ما فيها بيانات exposure (EXIF). صوّر بكاميرا الموبايل مباشرة، ما screenshot ولا صورة من واتساب.';
+  }
+  calc();
+}
+function readExif(buf){
+  try{
+    const v=new DataView(buf);if(v.getUint16(0)!==0xFFD8)return null;
+    let o=2;
+    while(o<v.byteLength-4){
+      const m=v.getUint16(o),len=v.getUint16(o+2);
+      if(m===0xFFE1&&v.getUint32(o+4)===0x45786966){
+        const T=o+10,le=v.getUint16(T)===0x4949;
+        const u16=p=>v.getUint16(p,le),u32=p=>v.getUint32(p,le);
+        const ifd=(p,cb)=>{const c=u16(p);for(let k=0;k<c;k++){const e=p+2+k*12;cb(u16(e),u16(e+2),u32(e+4),e+8)}};
+        let exifPtr=null;ifd(T+u32(T+4),(tag,ty,cnt,vp)=>{if(tag===0x8769)exifPtr=u32(vp)});
+        if(exifPtr==null)return null;const r={};
+        const rat=vp=>{const p=T+u32(vp);return u32(p)/u32(p+4)};
+        ifd(T+exifPtr,(tag,ty,cnt,vp)=>{
+          if(tag===0x829A)r.t=rat(vp);
+          else if(tag===0x829D)r.N=rat(vp);
+          else if(tag===0x8827)r.iso=ty===3?u16(vp):u32(vp);
+          else if(tag===0x8833&&!r.iso)r.iso=u32(vp);
+        });
+        return r;
+      }
+      if((m&0xFF00)!==0xFF00)break;o+=2+len;
+    }
+  }catch(e){}
+  return null;
+}
+
+// ---------- install + offline ----------
+let deferred=null;
+window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();deferred=e;$('install').hidden=false});
+$('install').onclick=async()=>{if(!deferred)return;deferred.prompt();await deferred.userChoice.catch(()=>{});deferred=null;$('install').hidden=true};
+window.addEventListener('appinstalled',()=>{$('install').hidden=true});
+if('serviceWorker' in navigator&&location.protocol!=='file:')navigator.serviceWorker.register('sw.js').catch(()=>{});
+
+layout();
+})();
+</script>
+</body>
+</html>

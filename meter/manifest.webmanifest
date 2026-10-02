@@ -1,0 +1,18 @@
+{
+  "name": "مقياس الضو",
+  "short_name": "Light Meter",
+  "description": "Light meter و exposure calculator للـ cine والـ stills",
+  "lang": "ar",
+  "dir": "rtl",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0E1012",
+  "theme_color": "#0E1012",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "icon-maskable.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
