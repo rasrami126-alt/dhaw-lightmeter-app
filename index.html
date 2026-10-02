@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+
+<head>
+    <meta charset="utf-8">
+    <title>Dhaw</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+        body {
+            background-color: black;
+            color: white;
+            text-align: center;
+        }
+
+        #camera {
+            width: 100%;
+            height: auto;
+            border-radius: 12px;
+        }
+
+        #reading {
+            font-size: 48px;
+            padding: 12px;
+            color: gold;
+            font-family: sans-serif;
+        }
+
+        #start {
+            font-size: 24px;
+            padding: 12px;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>Dhaw</h1>
+    <video id="camera" autoplay playsinline muted></video>
+    <p id="reading">EV: --</p>
+    <p id="settings">f/-- · 1/-- · ISO --</p>
+    <button id="start">Start</button>
+    <script>
+        const button = document.getElementById('start');
+        const camera = document.getElementById("camera");
+        const reading = document.getElementById('reading');
+        button.onclick = async function () {
+            const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
+            camera.srcObject = stream;
+            reading.textContent = "Camera on";
+        };
+    </script>
+</body>
+
+</html>
